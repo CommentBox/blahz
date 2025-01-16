@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Reverse image search across multiple search engines">
+    <meta name="theme-color" content="#1a73e8">
+    <title>Reverse Pictures</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Mobile-first responsive design */
+        @media (max-width: 768px) {
+            .nav-content {
+                padding: 0 15px;
+            }
+            .logo span {
+                font-size: 18px;
+            }
+            .searches-left {
+                font-size: 14px;
+            }
+            .upload-area {
+                padding: 20px;
+            }
+            .upload-icon {
+                font-size: 40px;
+            }
+            .preview-image {
+                max-height: 200px;
+            }
+            .favorites-content {
+                margin: 20px !important;
+                max-height: 90vh !important;
+            }
+            #favoritesGrid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
+                gap: 15px !important;
+            }
+            .share-section button, .load-share-section button {
+                width: 100%;
+                margin-top: 10px;
+            }
+        }
+
+        /* Common improvements */
+        .navbar {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .favorites-icon {
+            transition: transform 0.2s;
+        }
+        .favorites-icon:hover {
+            transform: scale(1.1);
+        }
+        .upload-area {
+            transition: border-color 0.2s, transform 0.2s;
+        }
+        .upload-area:hover {
+            border-color: #1a73e8;
+            transform: translateY(-2px);
+        }
+        .result-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .result-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .button-group button {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        /* Enhanced Button Styles */
+        .btn-primary {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(26,115,232,0.2);
+        }
+        .btn-primary:hover {
+            background: #1557b0;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(26,115,232,0.3);
+        }
+        .btn-primary:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(26,115,232,0.2);
+        }
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #1a73e8;
+            border: 2px solid #1a73e8;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+        .btn-secondary:hover {
+            background: #e8f0fe;
+            transform: translateY(-1px);
+        }
+        .btn-secondary:active {
+            transform: translateY(0);
+        }
+        /* Input enhancements */
+        .input-primary {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        .input-primary:focus {
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 3px rgba(26,115,232,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <nav class="navbar">
+            <div class="nav-content">
+                <div class="logo">
+                    <i class="fas fa-search" style="font-size: 24px; color: #1a73e8;"></i>
+                    <span style="font-size: 20px; font-weight: 500;">Reverse Pictures</span>
+                    <i class="fas fa-heart favorites-icon" id="favoritesButton" title="Hearted Pics" style="margin-left: 15px; cursor: pointer; color: #ff4081; font-size: 20px;"></i>
+                </div>
+                <div class="searches-left" style="font-size: 15px; color: #666;">
+                    Searches left today: <span id="searchCount" style="font-weight: 500; color: #1a73e8;">5</span>
+                </div>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <div class="upload-section">
+                <div class="upload-area" id="dropZone">
+                    <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                    <div class="upload-text">Drag & drop your image here or</div>
+                    <input type="file" id="imageInput" accept="image/*" class="file-input">
+                    <label for="imageInput" class="upload-button">Choose File</label>
+                </div>
+
+                <div class="preview-section" id="previewArea" style="display: none; margin-top: 20px;">
+                    <img id="previewImage" src="#" alt="Preview" class="preview-image" style="max-width: 100%; max-height: 300px; margin: 0 auto; display: block;">
+                </div>
+
+                <div class="button-group" style="margin: 20px 0; display: flex; justify-content: center; gap: 10px;">
+                    <button id="searchButton" class="search-button" disabled>
+                        <i class="fas fa-search"></i>
+                        Search
+                    </button>
+                    <button id="playButton" class="watch-ad-button">
+                        <i class="fas fa-play-circle"></i>
+                        Play Video
+                    </button>
+                </div>
+
+                <div class="loader" id="loader" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Searching across engines...</p>
+                </div>
+
+                <div id="resultsContainer" class="results-grid"></div>
+            </div>
+
+            <div class="ad-modal" id="adModal">
+                <div class="ad-content">Please wait while we process your request...</div>
+                <div class="ad-countdown" id="adCountdown">30</div>
+            </div>
+        </main>
+
+        <div class="favorites-modal" id="favoritesModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; overflow-y: auto;">
+            <div class="favorites-content" style="position: relative; background: white; margin: 50px auto; padding: 25px; max-width: 1000px; border-radius: 16px; max-height: 85vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+                <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 25px;">
+                    <i class="fas fa-times close-favorites" onclick="closeFavoritesModal()" style="cursor: pointer; font-size: 22px; color: #666; padding: 10px; transition: all 0.2s ease;" onmouseover="this.style.color='#1a73e8'" onmouseout="this.style.color='#666'"></i>
+                </div>
+                <div id="favoritesGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 25px; margin: 25px 0;"></div>
+                <div style="margin-top: 35px; border-top: 1px solid #eee; padding-top: 25px;">
+                    <div class="share-section" style="margin-bottom: 30px;">
+                        <button onclick="generateShareCode()" class="btn-primary">
+                            <i class="fas fa-share-alt"></i> Generate Share Code
+                        </button>
+                        <div id="shareCodeDisplay" style="display: none; margin-top: 20px;">
+                            <p id="shareCodeText" style="font-size: 16px; color: #1a73e8; margin-bottom: 10px;"></p>
+                            <button onclick="copyShareCode()" class="btn-secondary">
+                                <i class="fas fa-copy"></i> Copy Code
+                            </button>
+                        </div>
+                        <p id="shareSuccess" style="margin-top: 10px; color: #1a73e8; font-size: 14px; display: none;"></p>
+                    </div>
+                    <div class="load-share-section">
+                        <div style="display: flex; gap: 15px; align-items: center;">
+                            <div style="flex-grow: 1; position: relative;">
+                                <input type="text" id="loadShareCode" placeholder="Enter a share code to view shared pics" class="input-primary">
+                            </div>
+                            <button onclick="loadSharedFavorites()" class="btn-primary" style="white-space: nowrap;">
+                                <i class="fas fa-download"></i> Load Shared
+                            </button>
+                        </div>
+                        <div id="shareError" style="color: #d32f2f; margin-top: 10px; font-size: 14px; display: none; padding: 8px 12px; background: #ffebee; border-radius: 6px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <template id="resultTemplate">
+            <div class="result-card">
+                <div class="image-container">
+                    <img src="" alt="Result" crossorigin="anonymous" onclick="handleImageClick(this)">
+                    <i class="fas fa-heart heart-icon" onclick="toggleFavorite(this)" style="position: absolute; top: 10px; right: 10px; color: #fff; text-shadow: 0 0 3px rgba(0,0,0,0.5); cursor: pointer; font-size: 1.2em;"></i>
+                </div>
+                <div class="card-content">
+                    <h3 class="result-title"></h3>
+                    <div class="result-details"></div>
+                    <a href="#" target="_blank" class="view-button">
+                        <i class="fas fa-external-link-alt"></i>
+                        View Source
+                    </a>
+                </div>
+            </div>
+        </template>
+
+        <script>
+            const dropZone = document.getElementById('dropZone');
+            const imageInput = document.getElementById('imageInput');
+            const previewArea = document.getElementById('previewArea');
+            const previewImage = document.getElementById('previewImage');
+            const searchButton = document.getElementById('searchButton');
+            const watchAdButton = document.getElementById('playButton');
+            const loader = document.getElementById('loader');
+            const resultsContainer = document.getElementById('resultsContainer');
+            let selectedFile = null;
+
+            // Handle file selection
+            imageInput.addEventListener('change', function(e) {
+                if (e.target.files.length) {
+                    handleFile(e.target.files[0]);
+                }
+            });
+
+            // Handle file
+            function handleFile(file) {
+                if (file && file.type.startsWith('image/')) {
+                    selectedFile = file;
+                    previewImage.src = URL.createObjectURL(file);
+                    previewArea.style.display = 'block';
+                    searchButton.disabled = false;
+                }
+            }
+
+            // Handle search
+            searchButton.addEventListener('click', async function() {
+                if (!selectedFile) return;
+
+                // Show loader and clear results
+                loader.style.display = 'flex';
+                resultsContainer.innerHTML = '';
+
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+
+                try {
+                    const response = await fetch('/search', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        const data = await response.json();
+                        throw new Error(data.error || 'Search failed');
+                    }
+
+                    const data = await response.json();
+                    displayResults(data);
+                    await updateSearchCount();
+                } catch (error) {
+                    console.error('Search error:', error);
+                    resultsContainer.innerHTML = `<div class="error-message">${error.message || 'Search failed. Please try again.'}</div>`;
+                } finally {
+                    loader.style.display = 'none';
+                }
+            });
+
+            // Favorites functionality
+            const favoritesButton = document.getElementById('favoritesButton');
+            const favoritesModal = document.getElementById('favoritesModal');
+            const shareCodeText = document.getElementById('shareCodeText');
+            const shareCodeDisplay = document.getElementById('shareCodeDisplay');
+            const shareError = document.getElementById('shareError');
+            let favorites = [];
+
+            // Close modal when clicking outside
+            favoritesModal.addEventListener('click', function(e) {
+                if (e.target === favoritesModal) {
+                    closeFavoritesModal();
+                }
+            });
+
+            favoritesButton.addEventListener('click', async function() {
+                favoritesModal.style.display = 'block';
+                shareCodeDisplay.style.display = 'none';
+                shareError.style.display = 'none';
+                await loadFavorites();
+            });
+
+            function closeFavoritesModal() {
+                favoritesModal.style.display = 'none';
+                shareCodeDisplay.style.display = 'none';
+                shareError.style.display = 'none';
+                document.getElementById('loadShareCode').value = '';
+            }
+
+            async function loadFavorites() {
+                try {
+                    const response = await fetch('/favorites');
+                    if (!response.ok) throw new Error('Failed to load favorites');
+                    const data = await response.json();
+                    favorites = data.favorites;
+                    displayFavorites();
+                } catch (error) {
+                    console.error('Error loading favorites:', error);
+                    showError('Failed to load favorites. Please try again.');
+                }
+            }
+
+            function displayFavorites() {
+                const favoritesGrid = document.getElementById('favoritesGrid');
+                favoritesGrid.innerHTML = '';
+                
+                if (favorites.length === 0) {
+                    favoritesGrid.innerHTML = `
+                        <div style="grid-column: 1/-1; text-align: center; color: #666; padding: 40px 20px;">
+                            <i class="fas fa-heart" style="font-size: 40px; color: #ddd; margin-bottom: 15px;"></i>
+                            <p style="font-size: 16px; margin: 0;">No hearted pics yet</p>
+                            <p style="font-size: 14px; color: #999; margin-top: 5px;">Heart some pics to see them here!</p>
+                        </div>`;
+                    return;
+                }
+                
+                favorites.forEach(imageData => {
+                    const card = document.createElement('div');
+                    card.className = 'favorite-card';
+                    card.style.position = 'relative';
+                    card.style.borderRadius = '12px';
+                    card.style.overflow = 'hidden';
+                    card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+                    card.style.transition = 'all 0.2s ease-out';
+                    card.style.cursor = 'pointer';
+                    card.style.background = '#fff';
+                    
+                    const imgContainer = document.createElement('div');
+                    imgContainer.style.position = 'relative';
+                    imgContainer.style.paddingTop = '75%';
+                    
+                    const img = document.createElement('img');
+                    img.src = imageData.thumbnail || imageData.url;
+                    img.style.position = 'absolute';
+                    img.style.top = '0';
+                    img.style.left = '0';
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.objectFit = 'cover';
+                    
+                    const overlay = document.createElement('div');
+                    overlay.style.position = 'absolute';
+                    overlay.style.inset = '0';
+                    overlay.style.background = 'linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.7))';
+                    overlay.style.opacity = '0';
+                    overlay.style.transition = 'opacity 0.3s ease';
+                    
+                    const removeBtn = document.createElement('i');
+                    removeBtn.className = 'fas fa-heart';
+                    removeBtn.style.position = 'absolute';
+                    removeBtn.style.top = '15px';
+                    removeBtn.style.right = '15px';
+                    removeBtn.style.color = '#ff4081';
+                    removeBtn.style.cursor = 'pointer';
+                    removeBtn.style.fontSize = '22px';
+                    removeBtn.style.zIndex = '2';
+                    removeBtn.style.textShadow = '0 2px 4px rgba(0,0,0,0.2)';
+                    removeBtn.style.transition = 'transform 0.2s';
+                    removeBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        removeBtn.style.transform = 'scale(1.2)';
+                        setTimeout(() => removeBtn.style.transform = 'scale(1)', 200);
+                        toggleFavorite(null, imageData);
+                    };
+
+                    const viewSource = document.createElement('div');
+                    viewSource.style.position = 'absolute';
+                    viewSource.style.bottom = '15px';
+                    viewSource.style.left = '15px';
+                    viewSource.style.color = 'white';
+                    viewSource.style.fontSize = '14px';
+                    viewSource.style.opacity = '0';
+                    viewSource.style.transform = 'translateY(10px)';
+                    viewSource.style.transition = 'all 0.3s ease';
+                    viewSource.style.zIndex = '2';
+                    viewSource.innerHTML = '<i class="fas fa-external-link-alt"></i> Open Source';
+                    
+                    card.onmouseover = () => {
+                        overlay.style.opacity = '1';
+                        viewSource.style.opacity = '1';
+                        viewSource.style.transform = 'translateY(0)';
+                        card.style.transform = 'translateY(-4px)';
+                        card.style.boxShadow = '0 6px 16px rgba(0,0,0,0.15)';
+                    };
+                    
+                    card.onmouseout = () => {
+                        overlay.style.opacity = '0';
+                        viewSource.style.opacity = '0';
+                        viewSource.style.transform = 'translateY(10px)';
+                        card.style.transform = 'none';
+                        card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+                    };
+                    
+                    card.onclick = () => {
+                        window.open(imageData.url, '_blank');
+                    };
+                    
+                    imgContainer.appendChild(img);
+                    card.appendChild(imgContainer);
+                    card.appendChild(overlay);
+                    card.appendChild(removeBtn);
+                    card.appendChild(viewSource);
+                    favoritesGrid.appendChild(card);
+                });
+            }
+
+            function displaySharedFavorites(favorites) {
+                const favoritesGrid = document.getElementById('favoritesGrid');
+                favoritesGrid.innerHTML = ''; // Clear existing content
+                
+                if (!favorites || favorites.length === 0) {
+                    favoritesGrid.innerHTML = '<p style="text-align: center; width: 100%; color: #666;">No hearted pics found</p>';
+                    return;
+                }
+
+                favorites.forEach(favorite => {
+                    const card = document.createElement('div');
+                    card.className = 'favorite-card';
+                    card.style.position = 'relative';
+                    card.style.backgroundColor = '#fff';
+                    card.style.borderRadius = '12px';
+                    card.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+                    card.style.overflow = 'hidden';
+                    card.style.transition = 'transform 0.2s ease';
+                    
+                    const img = document.createElement('img');
+                    img.src = favorite.image;
+                    img.alt = 'Hearted pic';
+                    img.style.width = '100%';
+                    img.style.height = '200px';
+                    img.style.objectFit = 'cover';
+                    img.style.cursor = 'pointer';
+                    
+                    const overlay = document.createElement('div');
+                    overlay.style.position = 'absolute';
+                    overlay.style.bottom = '0';
+                    overlay.style.left = '0';
+                    overlay.style.right = '0';
+                    overlay.style.padding = '15px';
+                    overlay.style.background = 'linear-gradient(transparent, rgba(0,0,0,0.7))';
+                    overlay.style.display = 'flex';
+                    overlay.style.justifyContent = 'space-between';
+                    overlay.style.alignItems = 'center';
+
+                    const searchButton = document.createElement('button');
+                    searchButton.innerHTML = '<i class="fas fa-search"></i>';
+                    searchButton.className = 'search-button';
+                    searchButton.style.backgroundColor = '#1a73e8';
+                    searchButton.style.color = 'white';
+                    searchButton.style.border = 'none';
+                    searchButton.style.borderRadius = '50%';
+                    searchButton.style.width = '36px';
+                    searchButton.style.height = '36px';
+                    searchButton.style.cursor = 'pointer';
+                    searchButton.style.display = 'flex';
+                    searchButton.style.alignItems = 'center';
+                    searchButton.style.justifyContent = 'center';
+                    searchButton.style.transition = 'transform 0.2s ease';
+                    
+                    searchButton.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        handleImageClick(img);
+                    });
+                    
+                    overlay.appendChild(searchButton);
+                    card.appendChild(img);
+                    card.appendChild(overlay);
+                    favoritesGrid.appendChild(card);
+
+                    // Add hover effect
+                    card.addEventListener('mouseenter', () => {
+                        card.style.transform = 'translateY(-5px)';
+                    });
+                    card.addEventListener('mouseleave', () => {
+                        card.style.transform = 'translateY(0)';
+                    });
+                });
+            }
+
+            async function toggleFavorite(heartIcon, imageData = null) {
+                try {
+                    if (!imageData && heartIcon) {
+                        const card = heartIcon.closest('.result-card');
+                        const img = card.querySelector('img');
+                        const title = card.querySelector('.result-title').textContent;
+                        imageData = {
+                            url: img.src,
+                            thumbnail: img.src,
+                            title: title
+                        };
+                    }
+
+                    const response = await fetch('/favorite', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ image: imageData })
+                    });
+
+                    if (!response.ok) throw new Error('Failed to update favorite');
+                    const data = await response.json();
+                    
+                    if (heartIcon) {
+                        heartIcon.style.color = data.status === 'added' ? '#ff4081' : '#fff';
+                    }
+                    
+                    await loadFavorites();
+                } catch (error) {
+                    console.error('Error toggling favorite:', error);
+                    showError('Failed to update favorite. Please try again.');
+                }
+            }
+
+            async function generateShareCode() {
+                try {
+                    const response = await fetch('/generate_share');
+                    if (!response.ok) throw new Error('Failed to generate share code');
+                    const data = await response.json();
+                    
+                    // Display the share code
+                    shareCodeText.textContent = data.share_code;
+                    shareCodeDisplay.style.display = 'block';
+                    shareError.style.display = 'none';
+                } catch (error) {
+                    console.error('Error generating share code:', error);
+                    showError('Failed to generate share code. Please try again.');
+                }
+            }
+
+            function copyShareCode() {
+                const code = shareCodeText.textContent;
+                navigator.clipboard.writeText(code).then(() => {
+                    const copyBtn = shareCodeDisplay.querySelector('button');
+                    const originalText = copyBtn.innerHTML;
+                    copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                    setTimeout(() => {
+                        copyBtn.innerHTML = originalText;
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy:', err);
+                    showError('Failed to copy share code');
+                });
+            }
+
+            async function loadSharedFavorites() {
+                const shareCode = document.getElementById('loadShareCode').value.trim();
+                if (!shareCode) {
+                    showError('Please enter a share code');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/share/${shareCode}`);
+                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Failed to load shared favorites');
+                    }
+
+                    // Update favorites and display
+                    favorites = data.favorites;
+                    displayFavorites();
+                    
+                    // Show appropriate message based on how many were added
+                    const messageType = data.added_count > 0 ? 'success' : 'info';
+                    showError(data.message, messageType);
+                    
+                    document.getElementById('loadShareCode').value = '';
+                } catch (error) {
+                    console.error('Error loading shared favorites:', error);
+                    showError(error.message || 'Failed to load shared favorites', 'error');
+                }
+            }
+
+            function showError(message, type = 'error') {
+                const shareError = document.getElementById('shareError');
+                shareError.textContent = message;
+                
+                // Set color based on message type
+                switch(type) {
+                    case 'success':
+                        shareError.style.color = '#4caf50';  // Green
+                        break;
+                    case 'info':
+                        shareError.style.color = '#1a73e8';  // Blue
+                        break;
+                    case 'error':
+                    default:
+                        shareError.style.color = '#dc3545';  // Red
+                        break;
+                }
+                
+                shareError.style.display = 'block';
+                
+                if (type !== 'error') {
+                    setTimeout(() => {
+                        shareError.style.display = 'none';
+                    }, 3000);
+                }
+            }
+
+            // Watch ad button
+            watchAdButton.addEventListener('click', function() {
+                adModal.classList.add('active');
+                startAdCountdown();
+            });
+
+            function startAdCountdown() {
+                let timeLeft = 30;
+                adCountdown.textContent = timeLeft;
+
+                const countdownInterval = setInterval(async () => {
+                    timeLeft--;
+                    adCountdown.textContent = timeLeft;
+
+                    if (timeLeft <= 0) {
+                        clearInterval(countdownInterval);
+                        adModal.classList.remove('active');
+                        try {
+                            const response = await fetch('/add_search', { method: 'POST' });
+                            if (response.ok) {
+                                updateSearchCount();
+                            }
+                        } catch (error) {
+                            console.error('Error adding search:', error);
+                        }
+                    }
+                }, 1000);
+            }
+
+            // Prevent defaults for drag and drop
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            // Highlight drop zone
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.classList.add('highlight');
+                });
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.classList.remove('highlight');
+                });
+            });
+
+            // Handle drop
+            dropZone.addEventListener('drop', handleDrop);
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const file = dt.files[0];
+                handleFile(file);
+            }
+
+            async function updateSearchCount() {
+                try {
+                    const response = await fetch('/get_search_count');
+                    const data = await response.json();
+                    document.getElementById('searchCount').textContent = data.count;
+                } catch (error) {
+                    console.error('Error updating search count:', error);
+                }
+            }
+
+            async function handleImageClick(img) {
+                try {
+                    // Update preview image
+                    previewImage.src = img.src;
+                    previewArea.style.display = 'block';
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                    // Show loader and clear results
+                    resultsContainer.innerHTML = '';
+                    loader.style.display = 'flex';
+
+                    // Fetch the image
+                    const response = await fetch(img.src);
+                    const blob = await response.blob();
+                    
+                    // Create a file from the blob
+                    const file = new File([blob], 'search.jpg', { type: blob.type });
+                    
+                    // Create form data and send request
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    const searchResponse = await fetch('/search', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!searchResponse.ok) {
+                        const data = await searchResponse.json();
+                        throw new Error(data.error || 'Search failed');
+                    }
+                    
+                    const data = await searchResponse.json();
+                    displayResults(data);
+                    await updateSearchCount();
+                    
+                } catch (error) {
+                    console.error('Search error:', error);
+                    resultsContainer.innerHTML = `<div class="error-message">${error.message || 'Search failed. Please try again.'}</div>`;
+                } finally {
+                    loader.style.display = 'none';
+                }
+            }
+
+            function displayResults(data) {
+                resultsContainer.innerHTML = '';
+                const allResults = [];
+
+                // Process results from each engine
+                for (const engine in data) {
+                    if (data[engine] && Array.isArray(data[engine])) {
+                        data[engine].forEach(result => {
+                            if (result) {
+                                result.engine = engine;
+                                allResults.push(result);
+                            }
+                        });
+                    }
+                }
+
+                if (allResults.length === 0) {
+                    resultsContainer.innerHTML = '<div class="no-results">No results found</div>';
+                    return;
+                }
+
+                // Sort results by similarity if available
+                allResults.sort((a, b) => {
+                    if (a.similarity && b.similarity) {
+                        return parseFloat(b.similarity) - parseFloat(a.similarity);
+                    }
+                    return 0;
+                });
+
+                allResults.forEach(result => {
+                    const resultCard = document.getElementById('resultTemplate').content.cloneNode(true);
+                    
+                    // Handle thumbnail
+                    const img = resultCard.querySelector('img');
+                    if (result.thumbnail) {
+                        img.src = result.thumbnail;
+                        img.alt = result.title || 'Search result';
+                        img.style.cursor = 'pointer';
+                        img.onerror = function() {
+                            this.closest('.image-container').style.display = 'none';
+                        };
+                    } else {
+                        img.closest('.image-container').style.display = 'none';
+                    }
+
+                    // Handle title
+                    const title = resultCard.querySelector('.result-title');
+                    title.textContent = result.title || 'No Title';
+
+                    // Handle details
+                    const details = resultCard.querySelector('.result-details');
+                    if (result.similarity) {
+                        const similarityEl = document.createElement('p');
+                        similarityEl.textContent = `Similarity: ${result.similarity}%`;
+                        details.appendChild(similarityEl);
+                    }
+                    if (result.author) {
+                        const authorEl = document.createElement('p');
+                        authorEl.textContent = `Author: ${result.author}`;
+                        details.appendChild(authorEl);
+                    }
+                    if (result.engine) {
+                        const engineEl = document.createElement('p');
+                        engineEl.textContent = `Source: ${result.engine}`;
+                        details.appendChild(engineEl);
+                    }
+
+                    // Handle link
+                    const link = resultCard.querySelector('.view-button');
+                    if (result.url) {
+                        link.href = result.url;
+                    } else {
+                        link.style.display = 'none';
+                    }
+
+                    resultsContainer.appendChild(resultCard);
+                });
+            }
+        </script>
+    </body>
+</html>

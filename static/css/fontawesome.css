@@ -1,0 +1,59 @@
+/* Font Awesome Free 6.0.0 by @fontawesome - https://fontawesome.com */
+@font-face {
+  font-family: 'Font Awesome 6 Free';
+  font-style: normal;
+  font-weight: 400;
+  src: url('../fonts/fa-regular-400.woff2') format('woff2');
+}
+
+.far,
+.fa-regular {
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: 'Font Awesome 6 Free';
+  font-style: normal;
+  font-weight: 900;
+  src: url('../fonts/fa-solid-900.woff2') format('woff2');
+}
+
+.fas,
+.fa-solid {
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+}
+
+/* Font Awesome icons */
+.fa-search:before {
+  content: "\f002";
+}
+
+.fa-upload:before {
+  content: "\f093";
+}
+
+.fa-play:before {
+  content: "\f04b";
+}
+
+.fa-times:before {
+  content: "\f00d";
+}
+
+.fa-check:before {
+  content: "\f00c";
+}
+
+.fa-spinner:before {
+  content: "\f110";
+}
+
+.fa-image:before {
+  content: "\f03e";
+}
+
+.fa-link:before {
+  content: "\f0c1";
+}

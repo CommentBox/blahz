@@ -1,0 +1,12 @@
+quart>=0.18.4
+hypercorn>=0.14.3
+Pillow>=10.0.0
+requests>=2.31.0
+werkzeug>=2.3.7
+aiohttp>=3.8.5
+beautifulsoup4>=4.12.2
+pyquery>=2.0.0
+httpx>=0.24.1
+nest_asyncio>=1.5.8
+PyQt5
+psutil
