@@ -5,7 +5,7 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 from PicImageSearch import Network
-from PicImageSearch.engines import Ascii2D, BaiDu, Bing, Google, SauceNAO, Yandex
+from PicImageSearch import Ascii2D, BaiDu, Bing, Google, SauceNAO, Yandex
 import httpx
 import json
 import uuid
@@ -13,6 +13,13 @@ import shutil
 from hashlib import sha3_256
 import time
 import requests
+
+from flask import send_from_directory
+import os
+from flask import Flask, send_from_directory
+import os
+from flask import Flask, send_from_directory
+import os
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -400,4 +407,4 @@ async def view_shared_favorites(share_code):
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=False, port=5000)
+    app.run(debug=False, host='0.0.0.0', port=5000)

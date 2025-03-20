@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://reverse.pictures/</loc>
+    <lastmod>2024-01-25</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <!-- Add entries for each blog post -->
+  <url>
+    <loc>https://reverse.pictures/power-of-ai-in-reverse-image-search</loc>
+    <lastmod>2024-01-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://reverse.pictures/future-of-visual-search-2024-and-beyond</loc>
+    <lastmod>2024-01-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <!-- Add more entries for each blog post -->
+</urlset>
+
